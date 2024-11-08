@@ -1,30 +1,49 @@
 #include <Arduino.h>
 
-const int thermistorPin = A0;     // Analog pin used to connect the thermistor
-const int buzzerPin = 3;
+// Thermistor parameters from the datasheet
+#define RT0 100000
+#define B 3950
 
-void setup() 
-{
+// Our series resistor value = 10 kΩ
+#define R 10000  
+
+// Variables for calculations
+float RT, VR, ln, TX, T0, VRT;
+
+void setup() {
+  // Setup serial communication
   Serial.begin(9600);
-  pinMode(thermistorPin, INPUT);
-  pinMode(buzzerPin, OUTPUT);
+  // Convert T0 from Celsius to Kelvin
+  T0 = 25 + 273.15;
 }
 
-void loop() 
-{
-  float input = analogRead(thermistorPin);
-  float voltage = (input/1024.0) * 5.0;
-  Serial.print("Voltage: ");
-  Serial.println(voltage);
-  float temp = (voltage - 0.5) * 100;
-  Serial.print("Temp C: ");
-  Serial.println(temp);
-  delay(2000);
-  if (temp > 65)
-  {
-    digitalWrite(buzzerPin, HIGH);
-    return;
-  }
+void loop() {
+  // Read the voltage across the thermistor
+  VRT = (5.00 / 1023.00) * analogRead(A0);
+  Serial.print("voltage on thermistor: ");
+  Serial.println(VRT);
+  
+  // Calculate the voltage across the resistor
+  VR = 5.00 - VRT;
+  Serial.print("voltage on resistor: ");
+  Serial.println(VR);
 
-  digitalWrite(buzzerPin, LOW);
+  // Calculate resistance of the thermistor
+  RT = VRT / (VR / R);
+  Serial.print("resistance of thermistor: ");
+  Serial.println(RT);
+  
+  // Calculate temperature from thermistor resistance
+  ln = log(RT / RT0);
+  TX = (1 / ((ln / B) + (1 / T0)));
+
+  // Convert to Celsius
+  TX = TX - 273.15;
+  
+  Serial.print("Temperature: ");
+  // Display in Celsius
+  Serial.print(TX);                  
+  Serial.print("C\t");
+  
+  delay(5000);
 }
