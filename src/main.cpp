@@ -19,8 +19,6 @@ const int ButtonDepressDebounceLimit = 28000;
 unsigned long buttonPresses = 0;
 unsigned long lastPress = millis();
 unsigned int pressWait = 800;
-
-unsigned long previousTone = millis();
 unsigned long lastPrinted = millis();
 const unsigned int PrintDelay = 1000;
 
@@ -39,16 +37,7 @@ void setup() {
 
 void PlayTone()
 {
-  auto m = millis();
-  if ((m - previousTone) > 1000)
-  {
-    tone(BuzzPin, 262);
-  }
-  else
-  {
-    tone(BuzzPin, 349);
-  }
-  previousTone = m;
+  tone(BuzzPin, 349);
 }
 
 void StopTone()
@@ -61,7 +50,7 @@ void PrintTemperature()
   Serial.print("Temperature: ");
   // Display in Celsius
   Serial.print(temperature);                  
-  Serial.print("C\t");
+  Serial.println("C\t");
   lcd.clear();
   lcd.print(String(temperature) + " C");
   lcd.setCursor(0, 2);
@@ -113,7 +102,7 @@ void loop()
 {
   DetectButtonPress();
   CalculateTemperature();
-  if (lastPrinted > PrintDelay + millis())
+  if (millis() - PrintDelay > lastPrinted)
   {
     PrintTemperature();
     lastPrinted = millis();
@@ -122,9 +111,8 @@ void loop()
   if (temperature > limits[limitIndex])
   {
     PlayTone();
+    return;
   }
-  else
-  {
-    StopTone();
-  }
+  
+  StopTone();
 }
