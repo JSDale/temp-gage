@@ -12,11 +12,17 @@
 float RT, VR, ln, TX, T0, VRT;
 
 const int BuzzPin = 8;
-const int LimitPin = 10;
+const int LimitChangePin = 10;
 int limitIndex = 0;
 int limits[] = {50, 65, 85};
+const int ButtonDepressDebounceLimit = 28000;
+unsigned long buttonPresses = 0;
+unsigned long lastPress = millis();
+unsigned int pressWait = 800;
 
-unsigned long previousM = millis();
+unsigned long previousTone = millis();
+unsigned long lastPrinted = millis();
+const unsigned int PrintDelay = 1000;
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
@@ -24,7 +30,7 @@ void setup() {
   Serial.begin(9600);
   lcd.begin(16, 2);
   pinMode(BuzzPin, OUTPUT);
-  pinMode(LimitPin, INPUT);
+  pinMode(LimitChangePin, INPUT_PULLUP);
   // Convert T0 from Celsius to Kelvin
   T0 = 25 + 273.15;
   lcd.print("hello");
@@ -34,7 +40,7 @@ void setup() {
 void PlayTone()
 {
   auto m = millis();
-  if ((m - previousM) > 1000)
+  if ((m - previousTone) > 1000)
   {
     tone(BuzzPin, 262);
   }
@@ -42,7 +48,7 @@ void PlayTone()
   {
     tone(BuzzPin, 349);
   }
-  previousM = m;
+  previousTone = m;
 }
 
 void StopTone()
@@ -50,13 +56,36 @@ void StopTone()
   noTone(BuzzPin);
 }
 
-void loop() {
-  if (digitalRead(LimitPin) == HIGH)
+void PrintTemperature()
+{
+  Serial.print("Temperature: ");
+  // Display in Celsius
+  Serial.print(TX);                  
+  Serial.print("C\t");
+  lcd.clear();
+  lcd.print(String(TX) + " C");
+  lcd.setCursor(0, 2);
+  lcd.print("Warning at: " + String(limits[limitIndex]));
+}
+
+void DetectButtonPress()
+{
+  if (lastPress > millis() + pressWait) buttonPresses = 0;
+  if (digitalRead(LimitChangePin) == LOW)
+  {
+    buttonPresses++;
+  }
+  
+  if (buttonPresses > ButtonDepressDebounceLimit)
   {
     limitIndex++;
     if (limitIndex > 3) limitIndex = 0;
+    buttonPresses = 0;
   }
+}
 
+void CalculateTemperature()
+{
   // Read the voltage across the thermistor
   VRT = (5.00 / 1023.00) * analogRead(A0);
   Serial.print("voltage on thermistor: ");
@@ -78,15 +107,17 @@ void loop() {
 
   // Convert to Celsius
   TX = TX - 273.15;
-  
-  Serial.print("Temperature: ");
-  // Display in Celsius
-  Serial.print(TX);                  
-  Serial.print("C\t");
-  lcd.clear();
-  lcd.print(String(TX) + " C");
-  lcd.setCursor(0, 2);
-  lcd.print("Warning at: " + String(limits[limitIndex]));
+}
+
+void loop() 
+{
+  DetectButtonPress();
+  CalculateTemperature();
+  if (lastPrinted > PrintDelay + millis())
+  {
+    PrintTemperature();
+    lastPrinted = millis();
+  }
 
   if (TX > limits[limitIndex])
   {
@@ -96,6 +127,4 @@ void loop() {
   {
     StopTone();
   }
-  
-  delay(2000);
 }
