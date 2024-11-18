@@ -9,7 +9,7 @@
 #define R 10000
 
 // Variables for calculations
-float RT, VR, ln, TX, T0, VRT;
+float thermistorResistance, voltageAcrossResistor, ln, temperature, T0, voltageAcrossThermistor;
 
 const int BuzzPin = 8;
 const int LimitChangePin = 10;
@@ -60,10 +60,10 @@ void PrintTemperature()
 {
   Serial.print("Temperature: ");
   // Display in Celsius
-  Serial.print(TX);                  
+  Serial.print(temperature);                  
   Serial.print("C\t");
   lcd.clear();
-  lcd.print(String(TX) + " C");
+  lcd.print(String(temperature) + " C");
   lcd.setCursor(0, 2);
   lcd.print("Warning at: " + String(limits[limitIndex]));
 }
@@ -87,26 +87,26 @@ void DetectButtonPress()
 void CalculateTemperature()
 {
   // Read the voltage across the thermistor
-  VRT = (5.00 / 1023.00) * analogRead(A0);
-  Serial.print("voltage on thermistor: ");
-  Serial.println(VRT);
+  voltageAcrossThermistor = (5.00 / 1023.00) * analogRead(A0);
+  //Serial.print("voltage on thermistor: ");
+  //Serial.println(voltageAcrossThermistor);
   
   // Calculate the voltage across the resistor
-  VR = 5.00 - VRT;
-  Serial.print("voltage on resistor: ");
-  Serial.println(VR);
+  voltageAcrossResistor = 5.00 - voltageAcrossThermistor;
+  //Serial.print("voltage on resistor: ");
+  //Serial.println(voltageAcrossResistor);
 
   // Calculate resistance of the thermistor
-  RT = VRT / (VR / R);
-  Serial.print("resistance of thermistor: ");
-  Serial.println(RT);
+  thermistorResistance = voltageAcrossThermistor / (voltageAcrossResistor / R);
+  //Serial.print("resistance of thermistor: ");
+  //Serial.println(thermistorResistance);
   
   // Calculate temperature from thermistor resistance
-  ln = log(RT / RT0);
-  TX = (1 / ((ln / B) + (1 / T0)));
+  ln = log(thermistorResistance / RT0);
+  temperature = (1 / ((ln / B) + (1 / T0)));
 
   // Convert to Celsius
-  TX = TX - 273.15;
+  temperature = temperature - 273.15;
 }
 
 void loop() 
@@ -119,7 +119,7 @@ void loop()
     lastPrinted = millis();
   }
 
-  if (TX > limits[limitIndex])
+  if (temperature > limits[limitIndex])
   {
     PlayTone();
   }
