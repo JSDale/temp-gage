@@ -14,8 +14,9 @@ float thermistorResistance, voltageAcrossResistor, ln, temperature, T0, voltageA
 const int BuzzPin = 8;
 const int LimitChangePin = 10;
 int limitIndex = 0;
-int limits[] = {50, 65, 85};
-const int ButtonDepressDebounceLimit = 28000;
+int limits[] = {40, 45, 50, 55, 60, 65, 70, 75, 80, 85};
+const int LimitsCount = 9;
+const int ButtonDepressDebounceLimit = 300;
 unsigned long buttonPresses = 0;
 unsigned long lastPress = millis();
 unsigned int pressWait = 800;
@@ -33,6 +34,8 @@ void setup() {
   T0 = 25 + 273.15;
   lcd.print("hello");
   delay(1000);
+  lcd.setCursor(0, 2);
+  lcd.print("Warning at: " + String(limits[limitIndex]));
 }
 
 void PlayTone()
@@ -45,32 +48,41 @@ void StopTone()
   noTone(BuzzPin);
 }
 
+void UpdateWarning()
+{
+  lcd.setCursor(0, 2);
+  lcd.print("Warning at: " + String(limits[limitIndex]));
+}
+
 void PrintTemperature()
 {
   Serial.print("Temperature: ");
   // Display in Celsius
   Serial.print(temperature);                  
   Serial.println("C\t");
-  lcd.clear();
+  lcd.setCursor(0, 0);
   lcd.print(String(temperature) + " C");
-  lcd.setCursor(0, 2);
-  lcd.print("Warning at: " + String(limits[limitIndex]));
+  UpdateWarning();
 }
 
 void DetectButtonPress()
 {
-  if (lastPress > millis() + pressWait) buttonPresses = 0;
+  if (lastPress < millis() - pressWait) buttonPresses = 0;
   if (digitalRead(LimitChangePin) == LOW)
   {
     buttonPresses++;
+    lastPress = millis();
   }
   
-  if (buttonPresses > ButtonDepressDebounceLimit)
+  if (buttonPresses < ButtonDepressDebounceLimit)
   {
-    limitIndex++;
-    if (limitIndex > 3) limitIndex = 0;
-    buttonPresses = 0;
+    return;
   }
+
+  limitIndex++;
+  if (limitIndex > LimitsCount) limitIndex = 0;
+  buttonPresses = 0;
+  UpdateWarning();
 }
 
 void CalculateTemperature()
